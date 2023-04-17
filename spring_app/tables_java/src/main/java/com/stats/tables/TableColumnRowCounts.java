@@ -1,11 +1,23 @@
 package com.stats.tables;
 
+import org.springframework.jdbc.core.RowMapper;
+
 public class TableColumnRowCounts {
     private String tableName;
     private int columnCount;
     private int rowCount;
 
     public TableColumnRowCounts() {
+    }
+
+    public static RowMapper<TableColumnRowCounts> getMapper() {
+        return (rs, rowNum) -> {
+            TableColumnRowCounts item = new TableColumnRowCounts();
+            item.setTableName(rs.getString("TABLE_NAME"));
+            item.setColumnCount(rs.getInt("NUM_COLS"));
+            item.setRowCount(rs.getInt("NUM_ROWS"));
+            return item;
+        };
     }
 
     public String getTableName() {
