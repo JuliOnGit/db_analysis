@@ -40,9 +40,8 @@ public class Analyzer implements CommandLineRunner {
                        AND t.TABLE_NAME = c.TABLE_NAME
                        AND t.OWNER = r.OWNER
                        AND t.OWNER = c.OWNER
-                       AND t.TABLESPACE_NAME = 
                      """;
-        selectSql += "'" + tableSpaceName + "'";
+        selectSql += " AND t.TABLESPACE_NAME = '" + tableSpaceName + "'";
         selectSql += " AND t.OWNER = '" + tableOwner + "'";
         selectSql += " ORDER BY TABLE_NAME";
 
