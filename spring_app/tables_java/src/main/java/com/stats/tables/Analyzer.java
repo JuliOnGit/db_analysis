@@ -16,19 +16,32 @@ public class Analyzer implements CommandLineRunner {
     public void run(String... args) {
         String tableSpaceName = getTableSpaceName(args);
         String tableOwner = getTableOwner(args);
-        List<TableColumnRowCounts> tableStatistics =  this.getTableStatistics(tableSpaceName, tableOwner);
+
+        dropTable();
+        createTable(tableSpaceName, tableOwner);
+        List<TableColumnRowCounts> tableStatistics =  this.getTableStatistics();
+
         printTableStatistics(tableStatistics);
     }
 
-    public static void printTableStatistics(List<TableColumnRowCounts> tables) {
-        System.out.println("Table name, number of columns, number of rows");
-        for (TableColumnRowCounts row : tables) {
-            System.out.println(row.getOwner() + " " + row.getTableName() + " " + row.getColumnCount() + " " + row.getRowCount());
-        }
+    public void dropTable() {
+        String sql = """
+                BEGIN
+                   EXECUTE IMMEDIATE 'DROP TABLE TAB_COL_ROW_COUNTS';
+                EXCEPTION
+                   WHEN OTHERS THEN
+                      IF SQLCODE != -942 THEN
+                         RAISE;
+                      END IF;
+                END;
+                """;
+
+        jdbcTemplate.execute(sql);
     }
 
-    public List<TableColumnRowCounts> getTableStatistics(String tableSpaceName, String tableOwner) {
-        String selectSql = """
+    public void createTable(String tableSpaceName, String tableOwner) {
+        String sql = """
+                     CREATE TABLE TAB_COL_ROW_COUNTS AS
                      SELECT t.OWNER, t.TABLE_NAME, c.NUM_COLS, r.NUM_ROWS
                      FROM
                        ALL_TABLES t,
@@ -41,14 +54,26 @@ public class Analyzer implements CommandLineRunner {
                        AND t.OWNER = r.OWNER
                        AND t.OWNER = c.OWNER
                      """;
-        selectSql += " AND t.TABLESPACE_NAME = '" + tableSpaceName + "'";
-        selectSql += " AND t.OWNER = '" + tableOwner + "'";
-        selectSql += " ORDER BY TABLE_NAME";
+        sql += " AND t.TABLESPACE_NAME = '" + tableSpaceName + "'";
+        sql += " AND t.OWNER = '" + tableOwner + "'";
+        sql += " ORDER BY TABLE_NAME";
 
-        List<TableColumnRowCounts> tableColumnRowCounts = jdbcTemplate.query(selectSql, TableColumnRowCounts.getMapper());
+        jdbcTemplate.execute(sql);
+    }
+
+    public List<TableColumnRowCounts> getTableStatistics() {
+        String sql = "SELECT OWNER, TABLE_NAME, NUM_COLS, NUM_ROWS FROM TAB_COL_ROW_COUNTS";
+        List<TableColumnRowCounts> tableColumnRowCounts = jdbcTemplate.query(sql, TableColumnRowCounts.getMapper());
         System.out.println("Executed query");
 
         return tableColumnRowCounts;
+    }
+
+    public static void printTableStatistics(List<TableColumnRowCounts> tables) {
+        System.out.println("Table name, number of columns, number of rows");
+        for (TableColumnRowCounts row : tables) {
+            System.out.println(row.getOwner() + " " + row.getTableName() + " " + row.getColumnCount() + " " + row.getRowCount());
+        }
     }
 
     private String getTableSpaceName(String ...args) {
